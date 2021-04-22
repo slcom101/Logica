@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<script src="linq.js"></script>
+</head>
+
+<body>
+<h1>Probando un poco de logica, con arreglos de arreglos</h1>
+
+<form>
+<label for="txtentrada">JSON de entrada:</label>
+<textarea id="txtentrada" name="txtentrada" rows="8" cols="100">
+[
+  ["2018-12-01","AM","ID123", 5000], 
+  ["2018-12-01","AM","ID545", 7000], 
+  ["2018-12-01","PM","ID545", 3000], 
+  ["2018-12-02","AM","ID545", 7000]	
+]
+  </textarea>
+  <br><br>
+  <input type="button" id="btnprocesar" value="Procesar" onclick="procesarEntrada()">
+</form>
+
+<form>
+</form>
+
+<p>Resultado:</p>
+
+<h4>
+	<div id="lblsalida">	
+	</div>
+</h4>
+
+<script>
+
+var arregloGeneral = [];
+
+function procesarEntrada() {
+	var jsonArray = JSON.parse(document.getElementById("txtentrada").value);
+	for(i = 0; i < jsonArray.length; i++)
+		{
+		var registro = { date: jsonArray[i][0], horary: jsonArray[i][1], identifier: jsonArray[i][2], quantity: jsonArray[i][3] }
+		arregloGeneral.push(registro);
+		}
+
+	var queryResult = Enumerable.from(arregloGeneral)
+	.groupBy(
+	      g => g.date,
+	      element => element,
+	      (key, items) => ({key, items: items
+			.groupBy(g => g.horary)
+		    .select(s => ({
+		  	clave: s.key(),
+		  	sum: s.sum(s => s.quantity)
+		  	}))
+	      	.toArray()}
+	 ))
+	.toArray();
+
+	/*
+	Hasta aquí, ejemplo de lo que hay en "queryResult"
+	[{"key":"2018-12-01","items":[{"clave":"AM","sum":12000},{"clave":"PM","sum":3000}]},{"key":"2018-12-02","items":[{"clave":"AM","sum":7000}]}]
+	*/
+
+	//Tenemos ahora un arreglo, correspondiente a dos posiciones. En la primera posición, obtengo el "key" y lo coloco como nombre de un campo; luego obtengo "items" e itero con for dentro de él, y allí obtengo "clave" para ponerlo como nombre de un campo dentro de un objeto nuevo dentro del anterior, y obtengo sum para ponerlo como valor del campo del objeto actual
+
+	var objetoSalida = {  };
+
+	for(i = 0; i < queryResult.length; i++)
+	{
+		var titulo = queryResult[i]["key"];
+		var tempor = { };
+		var arregloInterno = queryResult[i]["items"];
+		for(j = 0; j < arregloInterno.length; j++)
+		{
+			var horaryTitulo = arregloInterno[j]["clave"];
+			var suma = arregloInterno[j]["sum"];
+			Object.assign(tempor, { [horaryTitulo]:suma });
+		}
+		Object.assign(objetoSalida, { [titulo]:tempor });
+	}
+
+ 	document.getElementById("lblsalida").innerHTML = JSON.stringify(objetoSalida);
+}
+</script>
+
+</body>
+</html>
